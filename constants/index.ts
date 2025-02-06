@@ -10,3 +10,5 @@ export const initialUserInfo = {
   buyIntervalMax: 20,
   buyIntervalMin: 10,
 }
+
+export const SLIPPAGE = process.env.SLIPPAGE

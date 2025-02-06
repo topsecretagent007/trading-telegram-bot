@@ -255,7 +255,7 @@ export const addSnipingToken = async (userId: number, token: string) => {
   }
 };
 
-export const addSnipingWallet = async (userId: number, keypair: any) => {
+export const addWallets = async (userId: number, keypair: any) => {
   try {
     // 🔹 Fetch user data from the database
     const user = await UserModel.findOne({ userId });
@@ -264,33 +264,81 @@ export const addSnipingWallet = async (userId: number, keypair: any) => {
       return null;
     }
 
+    // ✅ Check if token already exists
+    if (user.allWallets.some(t => t.pubkey === keypair.pubkey)) {
+      console.log("Already added token");
+      return false;
+    }
+
+    // 🔹 Convert secret key to string safely
+    const secretKeyString = Buffer.isBuffer(keypair.secretKey)
+      ? keypair.secretKey.toString('hex') // Store in hex to avoid issues
+      : keypair.secretKey;
+
     // 🔹 Check if the wallet is already added
-    if (user.snipingWallets.some(wallet => wallet.secret === keypair.secretKey)) {
+    if (user.allWallets.some(wallet => wallet.secret === secretKeyString)) {
       console.log("⚠️ Wallet already added.");
       return false;
     }
 
     // 🔹 Derive the public key from the secret key
-    const publicKey = keypair.publicKey.toBase58();  // Assuming keypair has `publicKey` and `secretKey`
+    const publicKey = keypair.publicKey.toBase58();
 
-    // 🔹 Add the new sniping wallet (store both public and private keys)
-    const newWallet = { pubkey: publicKey, secret: keypair.secretKey.toString('base58') };
+    // 🔹 Create the new wallet object
+    const newWallet = {
+      pubkey: publicKey,
+      secret: secretKeyString
+    };
 
-    user.snipingWallets.unshift(newWallet); // Add new wallet to the beginning of the array
+    // ✅ Add new token to the list
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { userId },
+      {
+        $push: {
+          allWallets: newWallet
+        }
+      },
+      { new: true }
+    );
 
-    // 🔹 Save the updated user data
-    const updatedUser = await user.save();
+    console.log("✅ New Wallet:", newWallet);
 
-    // 🔹 Log sniping wallet list
-    const snipingWallets = updatedUser.snipingWallets.map(wallet => `${wallet.pubkey},\n`).join("");
-    console.log(`${userId} => Updated sniping wallet list: ${snipingWallets}`);
+    // 🔹 Log updated sniping wallet list
+    const allWallets = user.allWallets.map(wallet => `${wallet.pubkey},\n`).join("");
+    console.log(`${userId} => Updated sniping wallet list:\n${allWallets}`);
 
-    return updatedUser.snipingWallets;
+    return user.allWallets;
   } catch (error: any) {
     console.error("❌ Error while adding sniping wallet:", error.message);
     return null;
   }
 };
+
+export const updateAddWallets = async (userId: number, allWalletData: any[]) => {
+  try {
+    const user = await UserModel.findOne({ userId });
+    console.log("user ==>", user)
+    if (!user) {
+      console.log(`❌ User with userId: ${userId} does not exist.`);
+      return null;
+    }
+
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { userId },
+      {
+        $set: {
+          allWallets: allWalletData
+        }
+      },
+      { new: true }
+    );
+
+
+  } catch (err: any) {
+    console.error("❌ Error while updating wallet:", err.message);
+    return null;
+  }
+}
 
 export const deleteSnipingToken = async (userId: number) => {
   try {
@@ -492,7 +540,9 @@ export const getTokenOwnershipStatus = async (mintAddress: PublicKey) => {
 
 export const getUserToken = async (
   chatId: number
-): Promise<{ tokenAddress: string; name: string; ticker: string } | null> => {
+): Promise<{
+  buyToken: string; name: string; ticker: string
+} | null> => {
   try {
     // Fetch the user data and select the tokenAddress and other fields
     const user = await UserModel.findOne({ userId: chatId });
@@ -500,13 +550,13 @@ export const getUserToken = async (
 
 
     // Check if the user exists and has at least one token
-    if (user && user.tokenAddress && user.tokenAddress.length > 0) {
-      const token = user.tokenAddress[0];
+    if (user && user.buyToken && user.buyToken.length > 0) {
+      const token = user.buyToken[0];
       console.log("token  ===>", token)
 
       // Return the relevant information for that token
       return {
-        tokenAddress: token.address,
+        buyToken: token.address,
         name: token.name,
         ticker: token.ticker,
       };
@@ -536,7 +586,7 @@ export const saveTokenData = async (
 
     if (existingTokenIndex !== -1) {
       // 🔹 Update existing token balance
-      user.sellToken[existingTokenIndex].amount = tokenData.amount;
+      user.sellToken[existingTokenIndex].tokenAmount = tokenData.amount;
     } else {
       // 🔹 Add new token entry
       user.sellToken.push(tokenData);
@@ -582,9 +632,31 @@ export const removeWalletFromTokenAddress = async (chatId: number, walletAddress
   );
 };
 
-export async function updateUserTokenAddress(
+export async function updateUserBuyToken(
   chatId: number,
-  { tokenAddress }: { tokenAddress: Types.DocumentArray<{ address: string; name: string; ticker: string; price: number; liq: number; mc: number; bondingCurveProgress: number; renounced: boolean; freeze: boolean; buyTokenState: string; solAmount: number; wallets: [{ address: string }] }> }
+  { buyToken }: {
+    buyToken: Types.DocumentArray<{
+      address: string;
+      name: string;
+      ticker: string;
+      price: number;
+      liq: number;
+      mc: number;
+      bondingCurveProgress: number;
+      renounced: boolean;
+      freeze: boolean;
+      buyTokenState: string;
+      amount: number;
+      buyTip: number;
+      autoTip: boolean;
+      mevProtect: boolean;
+      wallets: [
+        {
+          address: string,
+        },
+      ];
+    }>
+  }
 ) {
   try {
     // Find the user in the database
@@ -596,7 +668,7 @@ export async function updateUserTokenAddress(
     // Use findOneAndUpdate to update the tokenAddress field
     await UserModel.findOneAndUpdate(
       { userId: chatId },  // Query to find the user by their chatId
-      { $set: { tokenAddress } },  // Use $set to update tokenAddress field
+      { $set: { buyToken } },  // Use $set to update tokenAddress field
       { new: true }  // Return the updated document
     );
 
@@ -608,10 +680,22 @@ export async function updateUserTokenAddress(
   }
 }
 
-
 export async function updateUserSelectedSellToken(
   chatId: number,
-  { selectedSellToken }: { selectedSellToken: Types.DocumentArray<{ address: string; name: string; ticker: string; price: number; pubkey: string; amount: number; sellState: string; }> }
+  { selectedSellToken }: {
+    selectedSellToken: Types.DocumentArray<{
+      address: string;
+      name: string;
+      ticker: string;
+      tokenAmount: number;
+      pubkey: string;
+      price: number;
+      amount: number;
+      sellTip: number;
+      autoTip: boolean;
+      mevProtect: boolean;
+    }>
+  }
 ) {
   try {
     // Find the user in the database

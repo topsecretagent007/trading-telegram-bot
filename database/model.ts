@@ -11,6 +11,11 @@ type SnipeToken = {
   ticker: string;
 }
 
+type AllWallet = {
+  pubkey: string;
+  secret: string;
+}
+
 type BuyToken = {
   address: string;
   name: string;
@@ -22,7 +27,10 @@ type BuyToken = {
   renounced: boolean;
   freeze: boolean;
   buyTokenState: string;
-  solAmount: number;
+  amount: number;
+  buyTip: number;
+  autoTip: boolean;
+  mevProtect: boolean;
   wallets: [
     {
       address: string,
@@ -34,26 +42,35 @@ type SellToken = {
   address: string;  // Token address
   name: string;     // Token name
   ticker: string;   // Token ticker
-  amount: number;   // Token balance
+  tokenAmount: number;   // Token balance
   pubkey: string;   // Wallet public key
   price: number;    // Add price here
-  sellAmount: number;
-  sellState: string;
+  amount: number;
+  sellTip: number;
+  autoTip: boolean;
+  mevProtect: boolean;
 };
 
 type SelectedSellToken = {
   address: string;  // Token address
   name: string;     // Token name
   ticker: string;   // Token ticker
-  amount: number;   // Token balance
+  tokenAmount: number;   // Token balance
   pubkey: string;   // Wallet public key
   price: number;    // Add price here
-  sellAmount: number;
-  sellState: string;
+  amount: number;
+  sellTip: number;
+  autoTip: boolean;
+  mevProtect: boolean;
 }
 
 
 const SnipeWalletSchema = new Schema<SnipeWallet>({
+  pubkey: { type: String, required: true },
+  secret: { type: String, required: true },
+});
+
+const AllWalletSchema = new Schema<AllWallet>({
   pubkey: { type: String, required: true },
   secret: { type: String, required: true },
 });
@@ -75,7 +92,10 @@ const BuyTokenSchema = new Schema<BuyToken>({
   renounced: { type: Boolean, required: true, },
   freeze: { type: Boolean, required: true, },
   buyTokenState: { type: String, required: true },
-  solAmount: { type: Number, required: true, default: 0 },
+  amount: { type: Number, required: true, default: 0 },
+  buyTip: { type: Number, required: true, default: 0 },
+  autoTip: { type: Boolean, required: true },
+  mevProtect: { type: Boolean, required: true },
   wallets: [
     {
       address: { type: String, required: true },
@@ -87,22 +107,26 @@ const SellTokenSchema = new Schema<SellToken>({
   address: { type: String, required: true },
   name: { type: String, required: true },
   ticker: { type: String, required: true },
-  amount: { type: Number, required: true, default: 0 },
+  tokenAmount: { type: Number, required: true, default: 0 },
   pubkey: { type: String, required: true },
   price: { type: Number, required: true, default: 0 },
-  sellAmount: { type: Number, required: true, default: 0 },
-  sellState: { type: String, required: true },
+  amount: { type: Number, required: true, default: 0 },
+  sellTip: { type: Number, required: true, default: 0 },
+  autoTip: { type: Boolean, required: true },
+  mevProtect: { type: Boolean, required: true },
 });
 
 const SelectedSellTokenSchema = new Schema<SelectedSellToken>({
   address: { type: String, required: true },
   name: { type: String, required: true },
   ticker: { type: String, required: true },
-  amount: { type: Number, required: true },
+  tokenAmount: { type: Number, required: true },
   pubkey: { type: String, required: true },
   price: { type: Number, required: true },
-  sellAmount: { type: Number, required: true },
-  sellState: { type: String, required: true },
+  amount: { type: Number, required: true },
+  sellTip: { type: Number, required: true, default: 0 },
+  autoTip: { type: Boolean, required: true },
+  mevProtect: { type: Boolean, required: true },
 });
 
 const UserSchema = new Schema(
@@ -113,12 +137,13 @@ const UserSchema = new Schema(
     privateKey: { type: String, default: "", select: true },
     snipingTokens: { type: [SnipeTokenSchema], default: [] },
     snipingWallets: { type: [SnipeWalletSchema], default: [] },
+    allWallets: { type: [AllWalletSchema], default: [] },
     copyingWallets: { type: [String], default: [] },
     limitOrders: { type: [String], default: [] },
     snipingSolAmount: { type: Number, default: 0 },
     buyIntervalMax: { type: Number, default: 0 },
     buyIntervalMin: { type: Number, default: 0 },
-    tokenAddress: { type: [BuyTokenSchema], default: [] },
+    buyToken: { type: [BuyTokenSchema], default: [] },
     sellToken: { type: [SellTokenSchema], default: [] },
     selectedSellToken: { type: [SelectedSellTokenSchema], default: [] },
   },

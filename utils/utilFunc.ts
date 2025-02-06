@@ -1,3 +1,4 @@
+import { Connection, PublicKey } from '@solana/web3.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
@@ -145,3 +146,25 @@ export function editJson(newData: Partial<Data>, filename: string = "data.json")
     console.error(`Pubkey ${newData.pubkey} does not exist.`);
   }
 }
+
+export const  getTokenBalance = async (connection: Connection,walletAddress: PublicKey, tokenMintAddress: string) => {
+  const wallet = new PublicKey(walletAddress);
+  const tokenMint = new PublicKey(tokenMintAddress);
+
+  // Fetch the token account details
+  const response = await connection.getTokenAccountsByOwner(wallet, {
+    mint: tokenMint
+  });
+
+  if (response.value.length == 0) {
+    console.log('No token account found for the specified mint address.');
+    return;
+  }
+
+  // Get the balance
+  const tokenAccountInfo = await connection.getTokenAccountBalance(response.value[0].pubkey);
+
+  // Convert the balance from integer to decimal format
+
+  return tokenAccountInfo.value.uiAmount;
+ }

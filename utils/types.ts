@@ -14,11 +14,12 @@ export interface UserSettingData {
   publicKey: string;
   snipingTokens: string[];
   copyingWallets: string[];
+  allWallets: [];
   limitOrders: string;
   snipingSolAmount: Number;
   buyIntervalMax: Number;
   buyIntervalMin: Number;
-  tokenAddress: string[];
+  buyToken: string[];
   sellToken: string[];
 }
 

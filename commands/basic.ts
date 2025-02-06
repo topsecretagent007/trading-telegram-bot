@@ -26,7 +26,8 @@ export const welcome = async (chatId: number, username: string) => {
     console.log(`${username} : ${chatId} => Failed to fetch the user info from DB`);
     await helper.saveInfo(chatId, {
       userId: chatId, username, ...initialUserInfo,
-      tokenAddress: [],
+      buyToken: [],
+      allWallets: [],
       sellToken: []
     });
   }
@@ -104,7 +105,8 @@ export const welcomeDashboard = async (chatId: number, username: string) => {
     console.log(`${username} : ${chatId} => Failed to fetch the user info from DB`)
     await helper.saveInfo(chatId, {
       userId: chatId, username, ...initialUserInfo,
-      tokenAddress: [],
+      buyToken: [],
+      allWallets: [],
       sellToken: []
     })
   }
@@ -158,18 +160,18 @@ Trade smarter, faster, sharper.
 <code>${mainWalletData}</code>
 💰 Balance: ${balance} SOL (≈ $${usdBalance.toFixed(2)} USD)
     
-🛠 <a href="https://docs.lynxbot.cc" target="_blank" ><b>Lynx Docs</b></a>
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading" target="_blank" ><b>Lynx Docs</b></a>
 ✖️ <a href="https://x.com/lynxonsolana" target="_blank"><b>Lynx X</b></a>
-🤝 <a href=""><b>Lynx Portal</b></a>
+🤝 <a href="https://t.me/lynxbotportal"><b>Lynx Portal</b></a>
     
 💡 <b>Send a token address to get started.</b>
       `
     const content = [
       [{ text: '🟢 Buy', callback_data: 'buy-token' }, { text: '🔴 Sell', callback_data: 'sell-token' }],
       [{ text: '🎯 Sniper', callback_data: 'sniping' }, { text: '📋 Copy Trade', callback_data: 'copytrade' }, { text: '💤 AFK Mode', callback_data: 'limitOrders' }],
-      [{ text: '📊 Positions', callback_data: 'positions' }, { text: '⏳ Limit Orders', callback_data: 'limitOrders' }],
-      [{ text: '👥 Referrals', callback_data: 'referral' }, { text: '💸 Withdraw', callback_data: 'withdraw' }, { text: '⚙️ Settings', callback_data: 'referral' }],
-      [{ text: '❓ Help', callback_data: 'manage-wallet' }, { text: '🔄 Refresh', callback_data: '/start' }],
+      [{ text: '💳 Manage Wallets', callback_data: 'manage-wallet' }, { text: '⏳ Limit Orders', callback_data: 'limitOrders' }],
+      [{ text: '👥 Referrals', callback_data: 'referral' }, { text: '⚙️ Settings', callback_data: 'settings' }],
+      [{ text: '⁉️ FAQ', callback_data: 'manage-wallet' }, { text: '🔄 Refresh', callback_data: '/start' }],
     ]
 
     return { title, content }
@@ -186,7 +188,8 @@ export const lpDashboard = async (chatId: number, username: string) => {
       console.log(`${username} : ${chatId} => Failed to fetch user info`);
       await helper.saveInfo(chatId, {
         ...initialUserInfo, userId: chatId, username,
-        tokenAddress: [],
+        buyToken: [],
+        allWallets: [],
         sellToken: []
       });
       userInfo = await helper.findUser(chatId, username);
@@ -253,6 +256,321 @@ ${snipingTokensString.length > 0 ? snipingTokensString.join("\n") : "❌ No toke
     return { title: "❌ Failed to fetch LP Sniping details.", content: [] };
   }
 };
+
+export const settingsPage = async (chatId: number, username: string) => {
+  try {
+    let userInfo = await helper.findUser(chatId, username);
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch user info`);
+      await helper.saveInfo(chatId, {
+        ...initialUserInfo, userId: chatId, username,
+        buyToken: [],
+        allWallets: [],
+        sellToken: []
+      });
+      userInfo = await helper.findUser(chatId, username);
+    }
+
+    const title = `🐾  <b>Lynx Settings!</b>
+
+💡 Please enter all settings values accurately.
+
+
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading/lynx-user-guide/settings">Lynx Docs</a>
+
+💡 Please check the documentation and proceed with the correct settings.
+`;
+    const content = [
+      [{ text: '💳 Wallets', callback_data: 'wallets-setting' }, { text: "⛽ Fees", callback_data: "fees-setting" }],
+      [{ text: "🟢 Buy Settings", callback_data: "buy-setting" }, { text: "🔴 Sell Settings", callback_data: "sell-setting" }],
+      [{ text: "🥪 MEV Protection", callback_data: "mev-setting" }, { text: "💰 PNL Settings", callback_data: "pnl-setting" }],
+      [{ text: "🔙 Back", callback_data: "back-to-main" }],
+    ];
+
+    return { title, content };
+
+  } catch (err: any) {
+    console.error("❌ Error fetching Setting:", err.message);
+    return { title: "❌ Failed to fetch Setting details.", content: [] };
+  }
+}
+
+export const feeSettingPage = async (chatId: number, username: string) => {
+  try {
+    let userInfo = await helper.findUser(chatId, username);
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch user info`);
+      await helper.saveInfo(chatId, {
+        ...initialUserInfo, userId: chatId, username,
+        buyToken: [],
+        allWallets: [],
+        sellToken: []
+      });
+      userInfo = await helper.findUser(chatId, username);
+    }
+
+    const title = `🐾  <b>Lynx Fees Settings!</b>
+
+💡 Please enter all settings values accurately.
+
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading/lynx-user-guide/settings/fees">Lynx Docs</a>
+
+💡 Please check the documentation and proceed with the correct settings.
+`;
+    const content = [
+      [{ text: "💰 Buy Fee", callback_data: "fees-setting" }, { text: "💰 Sell Fee", callback_data: "sniper-wallets" }],
+      [{ text: "💰 Buy Tip", callback_data: "sniping-start-stop" }, { text: "💰 Sell Tip", callback_data: "sniping-start-stop" }],
+      [{ text: "🟢 Auto Tip", callback_data: "back-to-main" }],
+      [{ text: "🔙 Back", callback_data: "settings" }, { text: "🗑 Close", callback_data: "back-to-main" }],
+    ];
+
+    return { title, content };
+
+  } catch (err: any) {
+    console.error("❌ Error fetching fees Setting:", err.message);
+    return { title: "❌ Failed to fetch fees Setting details.", content: [] };
+  }
+}
+
+export const buySettingPage = async (chatId: number, username: string) => {
+  try {
+    let userInfo = await helper.findUser(chatId, username);
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch user info`);
+      await helper.saveInfo(chatId, {
+        ...initialUserInfo, userId: chatId, username,
+        buyToken: [],
+        allWallets: [],
+        sellToken: []
+      });
+      userInfo = await helper.findUser(chatId, username);
+    }
+
+    const title = `🐾  <b>Lynx Buy Settings!</b>
+
+💡 Please enter all settings values accurately.
+
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading/lynx-user-guide/settings/buy-settings">Lynx Docs</a>
+
+💡 Please check the documentation and proceed with the correct settings.
+`;
+    const content = [
+      [{ text: "💰 0.5 SOL ", callback_data: "fees-setting" }, { text: "💰 1 SOL ", callback_data: "sniper-wallets" }],
+      [{ text: "💰 3 SOL ", callback_data: "sniper-wallets" }, { text: "💰 X SOL ", callback_data: "sniping-start-stop" }],
+      [{ text: "🔙 Back", callback_data: "settings" }, { text: "🗑 Close", callback_data: "back-to-main" }],
+    ];
+
+    return { title, content };
+  } catch (err: any) {
+    console.error("❌ Error fetching buy Setting:", err.message);
+    return { title: "❌ Failed to fetch buy Setting details.", content: [] };
+  }
+}
+
+export const sellSettingPage = async (chatId: number, username: string) => {
+  try {
+    let userInfo = await helper.findUser(chatId, username);
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch user info`);
+      await helper.saveInfo(chatId, {
+        ...initialUserInfo, userId: chatId, username,
+        buyToken: [],
+        allWallets: [],
+        sellToken: []
+      });
+      userInfo = await helper.findUser(chatId, username);
+    }
+
+    const title = `🐾  <b>Lynx SELL Settings!</b>
+
+💡 Please enter all settings values accurately.
+
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading/lynx-user-guide/settings/buy-settings">Lynx Docs</a>
+
+💡 Please check the documentation and proceed with the correct settings.
+`;
+    const content = [
+      [{ text: "💰 10% ", callback_data: "fees-setting" }, { text: "💰 25% ", callback_data: "sniper-wallets" }],
+      [{ text: "💰 100% ", callback_data: "sniper-wallets" }, { text: "💰 X SOL or X %", callback_data: "sniping-start-stop" }],
+      [{ text: "🔙 Back", callback_data: "settings" }, { text: "🗑 Close", callback_data: "back-to-main" }],
+    ];
+
+    return { title, content };
+  } catch (err: any) {
+    console.error("❌ Error fetching sell Setting:", err.message);
+    return { title: "❌ Failed to fetch sell Setting details.", content: [] };
+  }
+}
+
+export const mevSettingPage = async (chatId: number, username: string) => {
+  try {
+    let userInfo = await helper.findUser(chatId, username);
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch user info`);
+      await helper.saveInfo(chatId, {
+        ...initialUserInfo, userId: chatId, username,
+        buyToken: [],
+        allWallets: [],
+        sellToken: []
+      });
+      userInfo = await helper.findUser(chatId, username);
+    }
+
+    const title = `🐾  <b>Lynx MEV Settings!</b>
+
+💡 Please enter all settings values accurately.
+
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading/lynx-user-guide/settings/mev-protection">Lynx Docs</a>
+
+💡 Please check the documentation and proceed with the correct settings.
+`;
+    const content = [
+      [{ text: "🟢 MEV Protect (Buys) ", callback_data: "fees-setting" }, { text: "🔴 MEV Protect (Sells) ", callback_data: "sniper-wallets" }],
+      [{ text: "🔙 Back", callback_data: "settings" }, { text: "🗑 Close", callback_data: "back-to-main" }],
+    ];
+
+    return { title, content };
+  } catch (err: any) {
+    console.error("❌ Error fetching MEV Setting:", err.message);
+    return { title: "❌ Failed to fetch MEV Setting details.", content: [] };
+  }
+}
+
+export const pnlSettingPage = async (chatId: number, username: string) => {
+  try {
+    let userInfo = await helper.findUser(chatId, username);
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch user info`);
+      await helper.saveInfo(chatId, {
+        ...initialUserInfo, userId: chatId, username,
+        buyToken: [],
+        allWallets: [],
+        sellToken: []
+      });
+      userInfo = await helper.findUser(chatId, username);
+    }
+
+    const title = `🐾  <b>Lynx PNL Settings!</b>
+
+💡 Please enter all settings values accurately.
+
+🛠 <a href="https://lynx-trading.gitbook.io/lynx-trading/lynx-user-guide/settings/pnl-settings">Lynx Docs</a>
+
+💡 Please check the documentation and proceed with the correct settings.
+`;
+    const content = [
+      [{ text: "🟢 Ticker ", callback_data: "fees-setting" }, { text: "🔴 PNL ", callback_data: "sniper-wallets" }],
+      [{ text: "🔙 Back", callback_data: "settings" }, { text: "🗑 Close", callback_data: "back-to-main" }],
+    ];
+
+    return { title, content };
+  } catch (err: any) {
+    console.error("❌ Error fetching PNL Setting:", err.message);
+    return { title: "❌ Failed to fetch PNL Setting details.", content: [] };
+  }
+}
+
+export const walletSettingPage = async (chatId: number, username: string) => {
+  try {
+    // 🔹 Fetch user info from the database
+    let userInfo = await helper.findUser(chatId, username);
+    let allWallet = await helper.findOne(chatId);
+    let mainWallet = await helper.findOne(chatId);
+    let allWalletsString: string[] = [];
+    let mainWalletData = "";
+
+    if (!userInfo) {
+      console.log(`${username} : ${chatId} => Failed to fetch the user info from DB`);
+      userInfo = await helper.findUser(chatId, username); // Refetch userInfo after saving
+    }
+
+    // 🔹 Format Main Wallet if available
+    if (mainWallet?.publicKey) {
+      const formattedMainWallet = `${mainWallet.publicKey.slice(0, 5)}...${mainWallet.publicKey.slice(-5)}`;
+      mainWalletData = `<code>${mainWallet.publicKey}</code>\n`;
+
+      try {
+        const solBalance = await connection.getBalance(new PublicKey(mainWallet.publicKey));
+        const balanceInSol = solBalance / 1e9; // Convert lamports to SOL
+        mainWalletData += `💰 ${balanceInSol.toFixed(2)} SOL\n`;
+      } catch (error) {
+        console.log("Error fetching SOL balance:", error);
+      }
+    }
+
+    // 🔹 Check if snipingWallets exist
+    if (allWallet?.allWallets && allWallet.allWallets.length > 0) {
+      for (let wallet of allWallet.allWallets) {
+        const publicKey = new PublicKey(wallet.pubkey);
+        const balance = await connection.getBalance(publicKey);
+        const balanceInSol = balance / 1_000_000_000;
+
+        allWalletsString.push(`💳 <code>${wallet.pubkey}</code>\n💰 ${balanceInSol.toFixed(2)} SOL\n`);
+      }
+    } else {
+      allWalletsString.push("❌ You currently have no wallets available. Please add a new one.");
+    }
+
+    console.log(`${username} : ${chatId} =>  all wallets page`);
+    console.log("allWalletsString  ===>", allWalletsString);
+
+    // 🔹 Format the current date and time for the last update
+    const nowUtc = new Date();
+    const formattedTime = new Intl.DateTimeFormat("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(nowUtc);
+
+    const title = `🎯 Wallets you can use 👝
+
+List of Current Wallets:
+
+💳 ${mainWalletData}
+
+${allWalletsString.join("\n")}
+
+📖 <a href="https://yourwebsite.com/learn-more">Learn More!</a>
+
+⏱ Last updated : ${formattedTime}
+`;
+
+    // 🔹 Generate Buttons
+    const statusMainButtons = [];
+
+    // 🟢 Main Wallet Button (Always One Per Line)
+    if (mainWallet?.publicKey) {
+      const formattedMainWallet = `${mainWallet.publicKey.slice(0, 5)}...${mainWallet.publicKey.slice(-5)}`;
+      statusMainButtons.push([{ text: `✅ ${formattedMainWallet}`, callback_data: "main-wallet-status" }]);
+    }
+
+    const statusButtons = [];
+    // 🔴 Sniping Wallet Buttons (2 Per Row)
+    if (allWallet?.allWallets?.length) {
+      for (let i = 0; i < allWallet.allWallets.length; i++) {
+        const formattedToken1 = `${allWallet.allWallets[i].pubkey.slice(0, 5)}...${allWallet.allWallets[i].pubkey.slice(-5)}`;
+
+        console.log("allWallet.allWallets[i].pubkey   ===> ", allWallet.allWallets[i].pubkey)
+
+        // If only one button remains, add it alone
+        statusButtons.push([{ text: `${formattedToken1}`, callback_data: `sniping-status-${i}` }, { text: `🗑 Delete`, callback_data: `delete-wallet-confirm-${i}` }]);
+      }
+    }
+
+    const content = [
+      ...statusMainButtons,
+      [{ text: "📥 Import Wallet", callback_data: "import-another-wallet-confirm" }, { text: '🆕 Create New Wallet', callback_data: 'create-another-new-wallet-confirm' }],
+      ...statusButtons,
+      [{ text: "🔙 Back", callback_data: "back-to-main" }]
+    ];
+
+    return { title, content };
+  } catch (error: any) {
+    console.error("❌ Error fetching sniping wallet list:", error.message);
+    return { title: "❌ Failed to fetch sniping wallets.", content: [] };
+  }
+}
 
 export const snipingWalletList = async (chatId: number, username: string) => {
   try {
@@ -472,8 +790,10 @@ export const buyToken = async (chatId: number, username: string, tokenStr: strin
   let platform = "Unknown";
   let mainWalletData = "";
   let balance = 0;
-  let buyAmount = 0;
-  let buyState = "Swap";
+  let amount = 0;
+  let buyTip = 0;
+  let autoTip = false;
+  let mevProtect = false;
 
   try {
     // 🔹 Validate token address
@@ -539,7 +859,7 @@ export const buyToken = async (chatId: number, username: string, tokenStr: strin
       console.warn("⚠️ Token is not from Pump.fun.");
     }
 
-    if (!mainWallet || mainWallet?.tokenAddress === undefined || mainWallet?.tokenAddress === null || mainWallet?.tokenAddress.length === 0 || mainWallet?.tokenAddress[0].address !== tokenStr) {
+    if (!mainWallet || mainWallet?.buyToken === undefined || mainWallet?.buyToken === null || mainWallet?.buyToken.length === 0 || mainWallet?.buyToken[0].address !== tokenStr) {
       // Create BuyToken data
       const newTokenData = {
         address: tokenStr,
@@ -551,8 +871,10 @@ export const buyToken = async (chatId: number, username: string, tokenStr: strin
         bondingCurveProgress: bondingCurveProgress,
         renounced: isRenounced === "✅", // Convert to boolean
         freeze: isFreeze === "✅", // Convert to boolean
-        buyTokenState: buyState,
-        solAmount: buyAmount,
+        amount: amount,
+        autoTip: autoTip,
+        buyTip: buyTip,
+        mevProtect: mevProtect,
         wallets: [
           {
             address: mainWallet?.publicKey,
@@ -563,12 +885,15 @@ export const buyToken = async (chatId: number, username: string, tokenStr: strin
       // 🔹 Update the User model with the new token data
       await UserModel.findOneAndUpdate(
         { userId: chatId },
-        { tokenAddress: newTokenData }, // Use the correct data object here
+        { buyToken: newTokenData }, // Use the correct data object here
         { new: true } // Return the updated document
       );
     } else {
-      buyAmount = mainWallet?.tokenAddress[0].solAmount;
-      buyState = mainWallet?.tokenAddress[0].buyTokenState;
+      amount = mainWallet?.buyToken[0].amount;
+      autoTip = mainWallet?.buyToken[0].autoTip;
+      buyTip = mainWallet?.buyToken[0].buyTip;
+      mevProtect = mainWallet?.buyToken[0].mevProtect;
+
     }
 
     title = `⚡️ <b>Lynx Buy</b>
@@ -583,6 +908,9 @@ export const buyToken = async (chatId: number, username: string, tokenStr: strin
 
   ${platform === "Pump.fun" ? `💊 Bonding Curve Progress: ${bondingCurveProgress}` : ""}
 
+  💰 Amount to buy: ${amount}
+  💰 Buy Tip: ${buyTip}
+
   💳 ${mainWalletData}
   💰 ${balance} SOL
   `;
@@ -595,10 +923,11 @@ export const buyToken = async (chatId: number, username: string, tokenStr: strin
   // 🔹 Initial button UI state
   const content = [
     [{ text: "🔙 Back", callback_data: "back-to-main" }, { text: "🔄 Refresh", callback_data: "buy-token-refresh" }],
-    [{ text: "💼 Wallet", callback_data: "wallet-to-buy" }, { text: "⚙️ Settings", callback_data: "sniping" }],
-    [{ text: `${buyState === "Swap" ? "✅ Swap 🔄" : "🔄 Swap"}`, callback_data: `buy-token-state-Swap` }, { text: `${buyState === "Limit" ? "✅ Limit 📈" : "📈 Limit"}`, callback_data: `buy-token-state-Limit` }, { text: `${buyState === "DCA" ? "✅ DCA 📉" : "📉 DCA"}`, callback_data: `buy-token-state-DCA` }],
-    [{ text: `${buyAmount === 0.5 ? "✅ 0.5 SOL 💰" : "💰 0.5 SOL"}`, callback_data: "buy-token-amount-0.5" }, { text: `${buyAmount === 1 ? "✅ 1 SOL 💰" : "💰 1 SOL"}`, callback_data: "buy-token-amount-1" }, { text: `${buyAmount === 3 ? "✅ 3 SOL 💰" : "💰 3 SOL"}`, callback_data: "buy-token-amount-3" }],
-    [{ text: `${buyAmount === 5 ? "✅ 5 SOL 💰" : "💰 5 SOL"}`, callback_data: "buy-token-amount-5" }, { text: `${buyAmount === 10 ? "✅ 10 SOL 💰" : "💰 10 SOL"}`, callback_data: "buy-token-amount-10" }, { text: `${(buyAmount !== 0.5 && buyAmount !== 1 && buyAmount !== 3 && buyAmount !== 5 && buyAmount !== 10) ? "✅ Custom 💰" : "💰 Custom"}`, callback_data: "buy-token-amount-x" }],
+    [{ text: "💼 Wallet", callback_data: "wallet-to-buy" }, { text: "⚙️ Settings", callback_data: "buy-setting" }],
+    [{ text: `${amount === 0.5 ? "✅ 0.5 SOL 💰" : "💰 0.5 SOL"}`, callback_data: "buy-token-amount-0.5" }, { text: `${amount === 1 ? "✅ 1 SOL 💰" : "💰 1 SOL"}`, callback_data: "buy-token-amount-1" }],
+    [{ text: `${amount === 3 ? "✅ 3 SOL 💰" : "💰 3 SOL"}`, callback_data: "buy-token-amount-3" }, { text: `${(amount !== 0.5 && amount !== 1 && amount !== 3) ? "✅ Custom 💰" : "💰 Custom"}`, callback_data: "buy-token-amount-x" }],
+    [{ text: "💰 Buy Tip", callback_data: `buy-token-state-tip` }, { text: "📚 Limit Orders", callback_data: `Limit Orders` }, { text: "⚠️ Slippage", callback_data: `Slippage` }],
+    [{ text: `${autoTip ? "🟢 Auto Tip" : "🔴 Auto Tip"}`, callback_data: `buy-token-state-auto` }, { text: `${mevProtect ? "🟢 MEV Protect" : "🔴 MEV Protect"}`, callback_data: `buy-token-state-mev` }],
     [{ text: "✅ Buy", callback_data: "confirm-buy-token" }],
   ];
 
@@ -687,14 +1016,14 @@ export const sellToken = async (
   const allTokens: { name: string; balance: number; price: number; mint: string }[] = _userInfo.sellToken.map(
     (token) => ({
       name: token.name,
-      balance: token.amount,
+      balance: token.tokenAmount,
       price: token.price || 0, // Assuming 'price' might not be defined, default to 0
       mint: token.address,
     })
   );
 
 
-  let title = `⚡️ <b>Lynx Sell</b>\n\n<b>Select a token to sell</b>\n 💳 ${mainWallet?.publicKey} \n\n`;
+  let title = `⚡️ <b>Lynx Sell</b>\n\n<b>Select a token to sell</b>\n 💳 <code>${mainWallet?.publicKey}</code> \n\n`;
 
   title += `<b>Your Tokens:</b>\n`;
 
@@ -705,6 +1034,10 @@ export const sellToken = async (
       token.price * token.balance
     ).toFixed(2)}\n\n`;
   });
+
+  if (tokensToDisplay.length === 0) {
+    title += `\n<b>❌ You have no tokens to sell. </b>\n`;
+  }
 
   const content: { text: string; callback_data: string }[][] = [];
 
@@ -730,8 +1063,10 @@ export const sellToken = async (
 };
 
 export const selectedSellToken = async (chatId: number, username: string, tokenId: string) => {
-  let sellAmount = 0;
-  let sellState = "";
+  let amount = 0;
+  let autoTip = false;
+  let mevProtect = false;
+  let sellTip = 0;
 
   if (!tokenId) {
     console.error("❌ tokenId is empty or undefined");
@@ -778,11 +1113,13 @@ export const selectedSellToken = async (chatId: number, username: string, tokenI
         address: selectedToken?.address,
         name: selectedToken?.name,
         ticker: selectedToken?.ticker,
-        amount: selectedToken?.amount,
+        tokenAmount: selectedToken?.tokenAmount,
         pubkey: selectedToken?.pubkey,
         price: selectedToken?.price,
-        sellAmount: selectedToken?.sellAmount,
-        sellState: selectedToken?.sellState,
+        amount: selectedToken?.amount,
+        autoTip: selectedToken?.autoTip,
+        mevProtect: selectedToken?.mevProtect,
+        sellTip: selectedToken?.sellTip
       });
       console.log(`Updated token data for ${selectedToken.name} in selectedSellToken[0].`);
     } else {
@@ -790,30 +1127,37 @@ export const selectedSellToken = async (chatId: number, username: string, tokenI
     }
 
     // 🔴 If the address matches, no need to update, just use existing data
-    sellAmount = userInfo.selectedSellToken[0].sellAmount;
-    sellState = userInfo.selectedSellToken[0].sellState;
+    amount = userInfo.selectedSellToken[0].amount;
+    autoTip = userInfo.selectedSellToken[0].autoTip;
+    mevProtect = userInfo.selectedSellToken[0].mevProtect;
+    sellTip = userInfo.selectedSellToken[0].sellTip;
 
     // Prepare UI response
     let title = `<b>Sell $${selectedToken.name} - (${selectedToken.ticker})</b>
-    🔹<b>${selectedToken.address}</b>
-    <a href="https://dexscreener.com/solana/${selectedToken.address}">Share token with your Reflink</a>
     
-    💰 Balance: ${selectedToken.amount.toFixed(4)} ($${(selectedToken.amount * selectedToken.price).toFixed(2)}) - \n💳 ${selectedToken.pubkey}
-    💰 Price: $${selectedToken.price}
+  🔹<b>${selectedToken.address}</b>
+  <a href="https://dexscreener.com/solana/${selectedToken.address}">Share token with your Reflink</a>
     
-    💲 Estimated Value: $${(selectedToken.price * selectedToken.amount).toFixed(2)}
+  💰 Balance: ${selectedToken.tokenAmount.toFixed(4)} ($${(selectedToken.tokenAmount * selectedToken.price).toFixed(2)}) - \n💳 ${selectedToken.pubkey}
+  💰 Price: $${selectedToken.price}
     
-    You sell:
-    <b>${selectedToken.name} (${selectedToken.price})</b> = 0.00 SOL (${selectedToken.price})
-    Price impact: 20.33%
-    `;
+  💲 Estimated Value: $${(selectedToken.price * selectedToken.tokenAmount).toFixed(2)}
+
+  💰 Amount to Sell: ${amount}
+  💰 Sell Tip: ${sellTip}
+    
+  You sell:
+  <b>${selectedToken.name} (${selectedToken.price})</b> = 0.00 SOL (${selectedToken.price})
+  Price impact: 20.33%
+  `;
 
     const content = [
       [{ text: "🔙 Back", callback_data: `sell-token` }, { text: "🔁 Refresh", callback_data: `sell-token-refresh` }],
-      [{ text: `${sellState === "Swap" ? "✅ Swap 🔄" : "🔄 Swap"}`, callback_data: `sell-token-state-Swap` }, { text: `${sellState === "Limit" ? "✅ Limit 📈" : "📈 Limit"}`, callback_data: "sell-token-state-Limit" }, { text: `${sellState === "DCA" ? "✅ DCA 📉" : "📉 DCA"}`, callback_data: `sell-token-state-DCA` }],
-      [{ text: `${sellAmount === 15 ? "✅ 15 % 💰" : "💰 15 %"}`, callback_data: `sell-token-amount-15` }, { text: `${sellAmount === 100 ? "✅ 100 % 💰" : "💰 100 %"}`, callback_data: "sell-token-amount-100" }, { text: `${(sellAmount !== 15 && sellAmount !== 100) ? "✅ X % 💰" : "💰 X %"}`, callback_data: `sell-token-amount-x` }],
-      [{ text: "Sell Initials", callback_data: `confirm-sell-${selectedToken.address}` }],
-      [{ text: "✅ Sell", callback_data: `confirm-sell-${selectedToken.address}` }]
+      [{ text: `${amount === 10 ? "✅ 10 % 💰" : "💰 10 %"}`, callback_data: `sell-token-amount-10` }, { text: `${amount === 25 ? "✅ 25 % 💰" : "💰 25 %"}`, callback_data: `sell-token-amount-25` }],
+      [{ text: `${amount === 100 ? "✅ 100 % 💰" : "💰 100 %"}`, callback_data: "sell-token-amount-100" }, { text: `${(amount !== 10 && amount !== 25 && amount !== 100) ? "✅ X % 💰" : "💰 X %"}`, callback_data: `sell-token-amount-x` }],
+      [{ text: "💰 Sell Tip", callback_data: `sell-token-state-tip` }, { text: "📚 Limit Orders", callback_data: "sell-Limit Orders" }, { text: "⚠️ Slippage", callback_data: `sell-Slippage` }],
+      [{ text: `${autoTip ? "🟢 Auto Tip" : "🔴 Auto Tip"}`, callback_data: `sell-token-state-auto` }, { text: `${mevProtect ? "🟢 MEV Protect" : "🔴 MEV Protect"}`, callback_data: `sell-token-state-mev` }],
+      [{ text: "✅ Sell", callback_data: `confirm-sell-token` }]
     ];
 
     // Save the updated selectedSellToken in the database using update
@@ -836,9 +1180,9 @@ export const selectWallets = async (chatId: number, username: string) => {
   try {
     // 🔹 Fetch user info from the database
     let userInfo = await helper.findUser(chatId, username);
-    let sniperWallet = await helper.findOne(chatId);
+    let allWallet = await helper.findOne(chatId);
     let mainWallet = await helper.findOne(chatId);
-    let snipingWalletsString: string[] = [];
+    let sallWalletString: string[] = [];
     let mainWalletData = "";
     let balance = 0;
 
@@ -861,24 +1205,24 @@ export const selectWallets = async (chatId: number, username: string) => {
     }
 
     // 🔹 Check if snipingWallets exists and is non-empty, else show a default message
-    if (sniperWallet?.snipingWallets && sniperWallet.snipingWallets.length > 0) {
-      for (let wallet of sniperWallet.snipingWallets) {
+    if (allWallet?.allWallets && allWallet.allWallets.length > 0) {
+      for (let wallet of allWallet.allWallets) {
         try {
           const publicKey = new PublicKey(wallet.pubkey);
           const walletBalance = await connection.getBalance(publicKey);
           const balanceInSol = walletBalance / 1_000_000_000;
 
-          snipingWalletsString.push(`💳 <code>${wallet.pubkey}</code>\n💰 ${balanceInSol.toFixed(2)} SOL\n`);
+          sallWalletString.push(`💳 <code>${wallet.pubkey}</code>\n💰 ${balanceInSol.toFixed(2)} SOL\n`);
         } catch (error) {
           console.log(`Error fetching balance for sniping wallet ${wallet.pubkey}:`, error);
         }
       }
     } else {
-      snipingWalletsString.push("❌ You currently have no wallets available. Please add a new one.");
+      sallWalletString.push("❌ You currently have no wallets available. Please add a new one.");
     }
 
     console.log(`${username} : ${chatId} =>  LP Dashboard page`);
-    console.log("snipingWalletsString  ===>", snipingWalletsString);
+    console.log("sallWalletString  ===>", sallWalletString);
 
     // 🔹 Format the current date and time for the last update
     const nowUtc = new Date();
@@ -896,7 +1240,7 @@ List of Current Wallets:
 💳 ${mainWalletData}
 💰 ${balance} SOL
 
-${snipingWalletsString.join("\n")}
+${sallWalletString.join("\n")}
 
 📖 <a href="https://yourwebsite.com/learn-more">Learn More!</a>
 
@@ -913,14 +1257,14 @@ ${snipingWalletsString.join("\n")}
     }
 
     // ✅ Add Sniping Wallets (2 per row, last one alone if odd)
-    if (sniperWallet?.snipingWallets?.length) {
-      for (let i = 0; i < sniperWallet.snipingWallets.length; i++) {
-        const formattedToken1 = `${sniperWallet.snipingWallets[i].pubkey.slice(0, 5)}...${sniperWallet.snipingWallets[i].pubkey.slice(-5)}`;
-        const callbackData = `buy-token-wallet-${sniperWallet.snipingWallets[i].pubkey}`;
+    if (allWallet?.allWallets?.length) {
+      for (let i = 0; i < allWallet.allWallets.length; i++) {
+        const formattedToken1 = `${allWallet.allWallets[i].pubkey.slice(0, 5)}...${allWallet.allWallets[i].pubkey.slice(-5)}`;
+        const callbackData = `buy-token-wallet-${allWallet.allWallets[i].pubkey}`;
 
         let statusButton: any[] = [];
-        const walletInTokenAddress = userInfo?.tokenAddress?.some((token: any) =>
-          token.wallets?.some((w: any) => w.address === sniperWallet.snipingWallets[i].pubkey)
+        const walletInTokenAddress = userInfo?.buyToken?.some((token: any) =>
+          token.wallets?.some((w: any) => w.address === allWallet.allWallets[i].pubkey)
         );
 
         // Check if the wallet is already in the tokenAddress
@@ -956,7 +1300,7 @@ ${snipingWalletsString.join("\n")}
 };
 
 
-export const addSnipingWallet = async (chatId: number, username: string, walletKey: string) => {
+export const addWallet = async (chatId: number, username: string, walletKey: string) => {
   let title: string;
   let walletAddress: PublicKey;
 
@@ -986,7 +1330,7 @@ export const addSnipingWallet = async (chatId: number, username: string, walletK
     console.log("✅ Valid Wallet Address:", walletAddress.toBase58());
 
     // 🔹 Store Public Key in database
-    const result = await helper.addSnipingWallet(chatId, Keypair.fromSecretKey(decoded));
+    const result = await helper.addWallets(chatId, Keypair.fromSecretKey(decoded));
 
     // 🔹 Format time
     const nowUtc = new Date();
@@ -1203,7 +1547,7 @@ export const manageWallet = async (chatId: number, connection: Connection) => {
       { text: '🆕 Create New Wallet', callback_data: 'create-new-wallet-confirm' }
     ],
     [
-      { text: '🔙Back', callback_data: 'back-to-main' }
+      { text: '🔙 Back', callback_data: 'back-to-main' }
     ]
   ]
   return { title, content }
@@ -1217,10 +1561,92 @@ export const createNewWalletConfirm = async (chatId: number) => {
   `
   const content = [
     [
-      { text: 'Yes', callback_data: 'import-wallet' },
-      { text: 'No', callback_data: 'manage-wallet' }
+      { text: 'Yes', callback_data: 'create-new-wallet' },
+      { text: 'No', callback_data: 'wallets-setting' }
     ]
   ]
+
+  return { title, content }
+}
+
+export const createAnotherNewWalletConfirm = async (chatId: number) => {
+  const title = `
+    🛑  If you create a new wallet, your current wallet will be erased.
+
+  🤔 Are you sure you want to proceed?
+  `
+  const content = [
+    [
+      { text: 'Yes', callback_data: 'create-another-new-wallet' },
+      { text: 'No', callback_data: 'wallets-setting' }
+    ]
+  ]
+
+  return { title, content }
+}
+
+export const deleteWalletConfirm = async (chatId: number, wallet: number) => {
+  const userInfo = await helper.findUser(chatId);
+  let balance = 0
+  let selectWallet = ""
+  try {
+    if (!userInfo) return {
+      title: "⚠️ Error happened in wallet managing operation",
+      content: [[{ text: '🔙 Back to setting page', callback_data: 'wallets-setting' }]]
+    }
+
+    selectWallet = userInfo.allWallets[wallet].pubkey
+
+    const solBalance = await connection.getBalance(new PublicKey(selectWallet))
+    balance = solBalance
+  } catch (error) {
+    console.log("Error happened while fetching SOL balance")
+  }
+  const title = `
+    🛑  Are you sure you want to delete your current wallet?
+    In this case, all data in the wallet will be deleted.
+
+  💳 <code>${selectWallet}</code>
+  💰 Balance: ${balance}SOL
+
+  🤔 Are you sure you want to delete it?
+  `
+  const content = [
+    [
+      { text: '✅ Yes', callback_data: `delete-wallet-${wallet}` },
+      { text: '❌ No', callback_data: 'wallets-setting' }
+    ]
+  ]
+
+  return { title, content }
+}
+
+export const deleteNewWallet = async (chatId: number, wallet: number) => {
+  const userInfo = await helper.findUser(chatId);
+  let selectWallet = ""
+  let allWalletData: any[] = [];
+
+  console.log("🚀 ~ manageWal ~ userInfo:", userInfo)
+  if (!userInfo) return {
+    title: "⚠️ Error happened in wallet managing operation",
+    content: [[{ text: '🔙 Back to setting page', callback_data: 'wallets-setting' }]]
+  }
+
+  selectWallet = userInfo.allWallets[wallet].pubkey
+
+  allWalletData = userInfo.allWallets.filter(w => w.pubkey !== selectWallet);
+
+  console.log("allWalletData  =>", allWalletData)
+  await helper.updateAddWallets(chatId, allWalletData)
+
+  const title = `🛑 Your wallet has been successfully deleted
+
+💳 <code>${selectWallet}</code>
+  
+💰 Add a new wallet or start a new task.
+`
+
+  const content = [[{ text: '✅ OK', callback_data: 'wallets-setting' }]]
 
   return { title, content }
 }
@@ -1240,7 +1666,26 @@ Created new wallet public key: ${keypair.publicKey.toBase58()}
 
 Wallet SOL balance: 0SOL`
 
-  const content = [[{ text: 'OK', callback_data: 'manage-wallet' }]]
+  const content = [[{ text: 'OK', callback_data: 'wallets-setting' }]]
+
+  return { title, content }
+}
+
+export const createAnotherNewWallet = async (chatId: number) => {
+  const keypair = Keypair.generate()
+
+  await helper.addWallets(
+    chatId,
+    keypair
+  )
+
+  const title = `New aother wallet successfully created
+  
+Created new wallet public key: ${keypair.publicKey.toBase58()} 
+
+Wallet SOL balance: 0SOL`
+
+  const content = [[{ text: 'OK', callback_data: 'wallets-setting' }]]
 
   return { title, content }
 }
@@ -1254,7 +1699,22 @@ export const importWalletConfirm = async (chatId: number) => {
   const content = [
     [
       { text: '✅ Yes', callback_data: 'import-wallet' },
-      { text: '❌ No', callback_data: 'manage-wallet' }
+      { text: '❌ No', callback_data: 'wallets-setting' }
+    ]
+  ]
+  return { title, content }
+}
+
+export const importAnotherWalletConfirm = async (chatId: number) => {
+  const title = `
+  🛑 If you import a new secret key, your current wallet will be erased.
+
+  🤔 Are you sure you want to proceed?
+  `
+  const content = [
+    [
+      { text: '✅ Yes', callback_data: 'import-another-wallet' },
+      { text: '❌ No', callback_data: 'wallets-setting' }
     ]
   ]
   return { title, content }
@@ -1266,7 +1726,6 @@ export const importWallet = async (chatId: number, connection: Connection, secre
     const bal = await connection.getBalance(keypair.publicKey)
     const userInfo = await helper.findUser(chatId);
 
-
     await helper.setWallet(chatId, secretKey, keypair.publicKey.toBase58())
     const title = `🎉 Wallet Imported Successfully! 🎉
 
@@ -1277,7 +1736,7 @@ export const importWallet = async (chatId: number, connection: Connection, secre
 🎉 Your wallet has been successfully imported. You can now manage it!`
     const content = [
       [
-        { text: '✅ Finish', callback_data: 'back-to-main' }
+        { text: '✅ Finish', callback_data: 'wallets-setting' }
       ]
     ];
 
@@ -1292,7 +1751,47 @@ The secret key you entered is invalid. Please double-check and try again.`;
 
     const content = [
       [
-        { text: '🔑 Input Secret Key Again', callback_data: 'sniper-wallets' }
+        { text: '🔑 Input Secret Key Again', callback_data: 'wallets-setting' }
+      ]
+    ];
+
+    return { title, content };
+  }
+}
+
+export const importanotherWallet = async (chatId: number, connection: Connection, secretKey: string) => {
+  try {
+    const keypair = Keypair.fromSecretKey(base58.decode(secretKey))
+    const bal = await connection.getBalance(keypair.publicKey)
+    const userInfo = await helper.findUser(chatId);
+
+
+    await helper.addWallets(chatId, keypair)
+    const title = `🎉 Wallet Imported Successfully! 🎉
+
+🔑 Public Key: <code>${keypair.publicKey.toBase58()}</code>
+
+💰 Wallet Balance: ${bal == 0 ? `0 SOL` : (bal / LAMPORTS_PER_SOL).toFixed(3)} SOL
+
+🎉 Your wallet has been successfully imported. You can now manage it!`
+    const content = [
+      [
+        { text: '✅ Finish', callback_data: 'wallets-setting' }
+      ]
+    ];
+
+    return { title, content }
+
+  } catch (error) {
+    console.log("Incorrect secret key");
+
+    const title = `❌ Incorrect Secret Key ❌
+
+The secret key you entered is invalid. Please double-check and try again.`;
+
+    const content = [
+      [
+        { text: '🔑 Input Secret Key Again', callback_data: 'wallets-setting' }
       ]
     ];
 
@@ -1355,7 +1854,7 @@ export const handleWalletButtonPress = async (chatId: number, walletAddress: str
       return; // Exit early if userInfo is null
     }
 
-    const walletInTokenAddress = userInfo.tokenAddress?.some((token: any) =>
+    const walletInTokenAddress = userInfo.buyToken?.some((token: any) =>
       token.wallets?.some((w: any) => w.address === walletAddress)
     );
 

@@ -108,6 +108,41 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                 await sendMessage(result, msgId, chatId)
                 break;
 
+            case 'settings':
+                result = await commands.settingsPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
+            case 'fees-setting':
+                result = await commands.feeSettingPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
+            case 'wallets-setting':
+                result = await commands.walletSettingPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
+            case 'buy-setting':
+                result = await commands.buySettingPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
+            case 'sell-setting':
+                result = await commands.sellSettingPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
+            case 'mev-setting':
+                result = await commands.mevSettingPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
+            case 'pnl-setting':
+                result = await commands.pnlSettingPage(chatId, username)
+                await sendMessage(result, msgId, chatId)
+                break;
+
             case 'delete-all-sniper-token':
                 const isDeleted = await helper.deleteAllSnipingTokens(chatId);
 
@@ -239,20 +274,20 @@ bot.on('callback_query', async (query: CallbackQuery) => {
 
             case 'back-to-buy-token':
                 result = await commands.welcomeDashboard(chatId, username);
-                let saveTokenAddress = "";
+                let saveBuyToken = "";
                 const savedToken = await helper.getUserToken(chatId);
                 console.log("savedToken  ==>", savedToken)
 
 
-                if (savedToken && savedToken.tokenAddress !== "") {
-                    saveTokenAddress = savedToken.tokenAddress;
+                if (savedToken && savedToken.buyToken !== "") {
+                    saveBuyToken = savedToken.buyToken;
                 }
 
-                console.log("address  ==>", saveTokenAddress)
+                console.log("address  ==>", saveBuyToken)
 
-                if (saveTokenAddress) {
+                if (saveBuyToken) {
                     // ✅ Use previously entered token address (string) for buyToken
-                    result = await commands.buyToken(chatId, username, saveTokenAddress);
+                    result = await commands.buyToken(chatId, username, saveBuyToken);
                     await sendMessage(result, msgId, chatId, false);
                 } else {
                     // ⚠️ If no token found, ask for input again
@@ -310,7 +345,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                         return;
                     }
 
-                    let walletList = userInfo.tokenAddress[0].wallets || [];
+                    let walletList = userInfo.buyToken[0].wallets || [];
 
                     if (walletList.length <= 0) {
                         // 🟢 If no wallets exist, add the new wallet
@@ -332,10 +367,10 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                     }
 
                     // ✅ Update the userInfo with the modified wallets array
-                    userInfo.tokenAddress[0].wallets = walletList;
+                    userInfo.buyToken[0].wallets = walletList;
 
                     // ✅ Save the updated user info back to the database
-                    await helper.updateUserTokenAddress(chatId, { tokenAddress: userInfo.tokenAddress });
+                    await helper.updateUserBuyToken(chatId, { buyToken: userInfo.buyToken });
 
                     // ✅ Fetch the updated wallet selection and send it as a message
                     const result = await commands.selectWallets(chatId, username);
@@ -345,9 +380,9 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                 }
                 break;
 
-            case action.startsWith('buy-token-state-') ? action : '':
-                const stateParts = action.split('-');
-                const buyState = stateParts.length > 3 ? stateParts.slice(3).join('-') : '';
+            case action.startsWith('buy-token-amount-') ? action : '':
+                const buyAmountParts = action.split('-');
+                const buyAmountStr = buyAmountParts.length > 3 ? buyAmountParts.slice(3).join('-') : '';
 
                 try {
                     const userInfo = await helper.findUser(chatId, username);
@@ -356,63 +391,44 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                         return;
                     }
 
-                    // ✅ Get the current buyTokenState
-                    let currentState = userInfo.tokenAddress[0]?.buyTokenState || '';
+                    let buyAmount: number | null = null;
 
-                    // ✅ If state is the same, return early to avoid unnecessary updates
-                    if (buyState === currentState) {
+                    // Convert predefined text values to numbers
+                    switch (buyAmountStr) {
+                        case "0.5":
+                        case "1":
+                        case "3":
+                            buyAmount = parseFloat(buyAmountStr);
+                            break;
+                        case "x":
+                            // Ask user to input a custom amount
+                            await bot.sendMessage(chatId, "📝 Enter the amount you want to buy:");
+                            helper.setUserState(chatId, "awaiting_custom_amount");
+                            return;
+                        default:
+                            console.warn(`Invalid buy amount received: ${buyAmountStr}`);
+                            return;
+                    }
+
+                    let currentAmount = userInfo.buyToken[0]?.amount || 0; // Default to 0 if not set
+
+                    // If the amount is the same, return early
+                    if (buyAmount === currentAmount) {
                         return;
                     }
 
-                    // ✅ Update the buyTokenState
-                    userInfo.tokenAddress[0].buyTokenState = buyState;
+                    // Update the database with the new amount
+                    userInfo.buyToken[0].amount = buyAmount;
+                    await helper.updateUserBuyToken(chatId, { buyToken: userInfo.buyToken });
 
-                    // ✅ Save the updated user info back to the database
-                    await helper.updateUserTokenAddress(chatId, { tokenAddress: userInfo.tokenAddress });
-
-                    // ✅ Fetch the updated buyToken data and send message
-                    result = await commands.buyToken(chatId, username, userInfo.tokenAddress[0].address);
+                    // Fetch updated wallet selection and send it as a message
+                    result = await commands.buyToken(chatId, username, userInfo.buyToken[0].address);
                     await sendMessage(result, msgId, chatId);
 
                 } catch (err) {
-                    console.error("❌ Error processing buy token state:", err);
+                    console.error("❌ Error processing buy amount:", err);
                 }
                 break;
-
-            case action.startsWith('sell-token-state-') ? action : '':
-                const sellStateParts = action.split('-');
-                const sellState = sellStateParts.length > 3 ? sellStateParts.slice(3).join('-') : '';
-
-                try {
-                    const userInfo = await helper.findUser(chatId, username);
-                    if (!userInfo) {
-                        console.error(`User info not found for chatId: ${chatId}, username: ${username}`);
-                        return;
-                    }
-
-                    // ✅ Get the current buyTokenState
-                    let currentState = userInfo.selectedSellToken[0]?.sellState || '';
-
-                    // ✅ If state is the same, return early to avoid unnecessary updates
-                    if (sellState === currentState) {
-                        return;
-                    }
-
-                    // ✅ Update the buyTokenState
-                    userInfo.selectedSellToken[0].sellState = sellState;
-
-                    // ✅ Save the updated user info back to the database
-                    await helper.updateUserSelectedSellToken(chatId, { selectedSellToken: userInfo.selectedSellToken });
-
-                    // ✅ Fetch the updated buyToken data and send message
-                    result = await commands.selectedSellToken(chatId, username, userInfo.selectedSellToken[0].address);
-                    await sendMessage(result, msgId, chatId);
-
-                } catch (err) {
-                    console.error("❌ Error processing buy token state:", err);
-                }
-                break;
-
 
             case action.startsWith('sell-token-amount-') ? action : '':
                 const sellAmountParts = action.split('-');
@@ -429,7 +445,8 @@ bot.on('callback_query', async (query: CallbackQuery) => {
 
                     // Convert predefined text values to numbers
                     switch (sellAmountStr) {
-                        case "15":
+                        case "10":
+                        case "25":
                         case "100":
                             sellAmount = parseFloat(sellAmountStr);
                             break;
@@ -443,7 +460,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                             return;
                     }
 
-                    let currentAmount = userInfo.selectedSellToken[0]?.sellAmount || 0; // Default to 0 if not set
+                    let currentAmount = userInfo.selectedSellToken[0]?.amount || 0; // Default to 0 if not set
 
                     // If the amount is the same, return early
                     if (sellAmount === currentAmount) {
@@ -451,7 +468,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                     }
 
                     // Update the database with the new amount
-                    userInfo.selectedSellToken[0].sellAmount = sellAmount;
+                    userInfo.selectedSellToken[0].amount = sellAmount;
                     await helper.updateUserSelectedSellToken(chatId, { selectedSellToken: userInfo.selectedSellToken });
 
                     // Fetch updated wallet selection and send it as a message
@@ -463,6 +480,129 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                 }
                 break;
 
+            case action.startsWith('buy-token-state-') ? action : '':
+                const buyTokenStateParts = action.split('-');
+                const buyTokenState = buyTokenStateParts.length > 3 ? buyTokenStateParts.slice(3).join('-') : '';
+
+                try {
+                    const userInfo = await helper.findUser(chatId, username);
+                    if (!userInfo) {
+                        console.error(`User info not found for chatId: ${chatId}, username: ${username}`);
+                        return;
+                    }
+
+                    let currentAuto = userInfo.buyToken[0]?.autoTip || false;
+                    let currentMEV = userInfo.buyToken[0]?.mevProtect || false;
+
+                    switch (buyTokenState) {
+                        case "tip":
+                            // Ask the user to input a custom amount
+                            await bot.sendMessage(chatId, "📝 TIP Please enter quantity:");
+
+                            // Listen for the next message from the user
+                            bot.once("message", async (msg) => {
+                                const tipAmount = parseFloat(msg.text?.trim() || "0"); // Ensures msg.text is a string
+
+                                // Validate the input
+                                if (isNaN(tipAmount) || tipAmount <= 0) {
+                                    await bot.sendMessage(chatId, "❌ Invalid TIP amount. Please enter a valid number.");
+                                    return;
+                                }
+
+                                // Store the user's tip amount in the database
+                                userInfo.buyToken[0].buyTip = tipAmount;
+                                await helper.updateUserBuyToken(chatId, { buyToken: userInfo.buyToken });
+
+                                // Fetch updated wallet selection and send it as a message
+                                const result = await commands.buyToken(chatId, username, userInfo.buyToken[0].address);
+                                await sendMessage(result, msgId, chatId);
+                            });
+                            break;
+
+                        case "auto":
+                            userInfo.buyToken[0].autoTip = !currentAuto;
+                            await helper.updateUserBuyToken(chatId, { buyToken: userInfo.buyToken });
+                            result = await commands.buyToken(chatId, username, userInfo.buyToken[0].address);
+                            await sendMessage(result, msgId, chatId);
+                            break;
+
+                        case "mev":
+                            userInfo.buyToken[0].mevProtect = !currentMEV;
+                            await helper.updateUserBuyToken(chatId, { buyToken: userInfo.buyToken });
+                            result = await commands.buyToken(chatId, username, userInfo.buyToken[0].address);
+                            await sendMessage(result, msgId, chatId);
+                            break;
+
+                        default:
+                            console.warn(`Invalid buy amount received: ${buyTokenState}`);
+                            return;
+                    }
+                } catch (err) {
+                    console.error("❌ Error processing buy amount:", err);
+                }
+                break;
+
+            case action.startsWith('sell-token-state-') ? action : '':
+                const sellTokenStateParts = action.split('-');
+                const sellTokenState = sellTokenStateParts.length > 3 ? sellTokenStateParts.slice(3).join('-') : '';
+
+                try {
+                    const userInfo = await helper.findUser(chatId, username);
+                    if (!userInfo) {
+                        console.error(`User info not found for chatId: ${chatId}, username: ${username}`);
+                        return;
+                    }
+
+                    let currentAuto = userInfo.selectedSellToken[0]?.autoTip || false;
+                    let currentMEV = userInfo.selectedSellToken[0]?.mevProtect || false;
+
+                    switch (sellTokenState) {
+                        case "tip":
+                            // Ask the user to input a custom amount
+                            await bot.sendMessage(chatId, "📝 TIP Please enter quantity:");
+
+                            // Listen for the next message from the user
+                            bot.once("message", async (msg) => {
+                                const tipAmount = parseFloat(msg.text?.trim() || "0"); // Ensures msg.text is a string
+
+                                // Validate the input
+                                if (isNaN(tipAmount) || tipAmount <= 0) {
+                                    await bot.sendMessage(chatId, "❌ Invalid TIP amount. Please enter a valid number.");
+                                    return;
+                                }
+
+                                // Store the user's tip amount in the database
+                                userInfo.selectedSellToken[0].sellTip = tipAmount;
+                                await helper.updateUserSelectedSellToken(chatId, { selectedSellToken: userInfo.selectedSellToken });
+
+                                // Fetch updated wallet selection and send it as a message
+                                const result = await commands.selectedSellToken(chatId, username, userInfo.selectedSellToken[0].address);
+                                await sendMessage(result, msgId, chatId);
+                            });
+                            break;
+
+                        case "auto":
+                            userInfo.selectedSellToken[0].autoTip = !currentAuto;
+                            await helper.updateUserSelectedSellToken(chatId, { selectedSellToken: userInfo.selectedSellToken });
+                            result = await commands.selectedSellToken(chatId, username, userInfo.selectedSellToken[0].address);
+                            await sendMessage(result, msgId, chatId);
+                            break;
+
+                        case "mev":
+                            userInfo.selectedSellToken[0].mevProtect = !currentMEV;
+                            await helper.updateUserSelectedSellToken(chatId, { selectedSellToken: userInfo.selectedSellToken });
+                            result = await commands.selectedSellToken(chatId, username, userInfo.selectedSellToken[0].address);
+                            await sendMessage(result, msgId, chatId);
+                            break;
+
+                        default:
+                            console.warn(`Invalid sell amount received: ${sellTokenState}`);
+                            return;
+                    }
+                } catch (err) {
+                    console.error("❌ Error processing sell amount:", err);
+                }
+                break;
 
             case 'buy-token-refresh':
                 try {
@@ -474,7 +614,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                     }
 
                     // Get the address of the token to use for the refresh
-                    const buyTokenAddress = userInfo.tokenAddress[0].address;
+                    const buyTokenAddress = userInfo.buyToken[0].address;
 
                     if (!buyTokenAddress) {
                         console.error("No token address found for the user.");
@@ -482,7 +622,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                     }
 
                     // ✅ Completely reset tokenAddress in the database with an empty DocumentArray
-                    await helper.updateUserTokenAddress(chatId, { tokenAddress: [] as unknown as Types.DocumentArray<any> });
+                    await helper.updateUserBuyToken(chatId, { buyToken: [] as unknown as Types.DocumentArray<any> });
 
                     // Proceed with the "buyToken" logic
                     result = await commands.buyToken(chatId, username, buyTokenAddress);
@@ -511,8 +651,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                         return;
                     }
 
-                    sellTokenData.sellAmount = 15;
-                    sellTokenData.sellState = "Swap";
+                    sellTokenData.amount = 15;
 
                     // ✅ Completely reset tokenAddress in the database with an empty DocumentArray
                     await helper.updateUserSelectedSellToken(chatId, { selectedSellToken: userInfo.selectedSellToken });
@@ -528,8 +667,24 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                 break;
 
             case 'confirm-buy-token':
+                try {
+                    result = await commands.volumeBuy(chatId)
+                    await sendMessage(result, msgId, chatId)
+                } catch (error) {
+                    console.error("❌ Error processing buy amount:", error);
+                }
 
-                break;
+                break
+
+            case 'confirm-sell-token':
+                try {
+                    result = await commands.volumeSell(chatId)
+                    await sendMessage(result, msgId, chatId)
+                } catch (error) {
+                    console.error("❌ Error processing buy amount:", error);
+                }
+
+                break
 
             case 'toggle-sniping-mode':
                 const keyboard = query.message?.reply_markup?.inline_keyboard || [];
@@ -693,6 +848,70 @@ bot.on('callback_query', async (query: CallbackQuery) => {
                 sendMessage(result, msgId, chatId)
                 break;
 
+            case 'import-another-wallet-confirm':
+                result = await commands.importAnotherWalletConfirm(chatId)
+                sendMessage(result, msgId, chatId)
+                break;
+
+            case 'import-another-wallet':
+                const anotherWalletKeyMsg = await bot.sendMessage(chatId, 'Please send secret key of wallet to import.')
+
+                bot.once(`message`, async (msg) => {
+                    if (msg.text) {
+                        result = await commands.importanotherWallet(chatId, solanaConnection, msg.text)
+                        await sleep(1000)
+                        await bot.deleteMessage(chatId, anotherWalletKeyMsg.message_id)
+                        sendMessage(result, msgId, chatId)
+                        return
+                    } else {
+                        result = await commands.walletSettingPage(chatId, username)
+                        sendMessage(result, msgId, chatId)
+                        return
+                    }
+                })
+                break;
+
+            case 'create-another-new-wallet-confirm':
+                result = await commands.createAnotherNewWalletConfirm(chatId)
+                sendMessage(result, msgId, chatId)
+                break;
+
+            case 'create-another-new-wallet':
+                result = await commands.createAnotherNewWallet(chatId)
+                sendMessage(result, msgId, chatId)
+                break;
+
+
+            case action.startsWith('delete-wallet-confirm-') ? action : '':
+                const deleteWalletConfirmParts = action.split('-');
+                const deleteWalletConfirm = deleteWalletConfirmParts.length > 3 ? deleteWalletConfirmParts.slice(3).join('-') : '';
+                console.log("deleteWalletConfirm  ==>", Number(deleteWalletConfirm))
+
+                try {
+                    if (deleteWalletConfirm) {
+                        result = await commands.deleteWalletConfirm(chatId, Number(deleteWalletConfirm))
+                        sendMessage(result, msgId, chatId)
+                    }
+                } catch (err) {
+                    console.error("❌ Error processing delete wallet:", err);
+                }
+                break;
+
+            case action.startsWith('delete-wallet-') ? action : '':
+                const deleteWalletParts = action.split('-');
+                const deleteWallet = deleteWalletParts.length > 2 ? deleteWalletParts.slice(2).join('-') : '';
+                console.log(deleteWallet)
+
+                try {
+                    if (deleteWallet) {
+                        result = await commands.deleteNewWallet(chatId, Number(deleteWallet))
+                        sendMessage(result, msgId, chatId)
+                    }
+                } catch (err) {
+                    console.error("❌ Error processing delete wallet:", err);
+                }
+                break;
+
             case 'view-secret-key':
                 result = await commands.showSecretKey(chatId, username)
                 sendMessage(result, msgId, chatId)
@@ -761,14 +980,14 @@ bot.on('message', async (msg) => {
 
         try {
             const userInfo = await helper.findUser(chatId, username);
-            if (!userInfo || !userInfo.tokenAddress[0]) return;
+            if (!userInfo || !userInfo.buyToken[0]) return;
 
-            userInfo.tokenAddress[0].solAmount = customAmount;
-            await helper.updateUserTokenAddress(chatId, { tokenAddress: userInfo.tokenAddress });
+            userInfo.buyToken[0].amount = customAmount;
+            await helper.updateUserBuyToken(chatId, { buyToken: userInfo.buyToken });
 
             helper.setUserState(chatId, null);
 
-            const result = await commands.buyToken(chatId, username, userInfo.tokenAddress[0].address);
+            const result = await commands.buyToken(chatId, username, userInfo.buyToken[0].address);
             await sendMessage(result, msg.message_id, chatId);
         } catch (err) {
             console.error("❌ Error processing custom amount:", err);
